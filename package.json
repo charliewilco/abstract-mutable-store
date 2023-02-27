@@ -1,6 +1,6 @@
 {
 	"name": "@charliewilco/abstract-mutable-store",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"repository": "charliewilco/abstract-mutable-store",
 	"license": "Unlicense",
 	"files": [
