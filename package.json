@@ -1,7 +1,7 @@
 {
-	"name": "@charliewilco/esm",
+	"name": "@charliewilco/abstract-mutable-store",
 	"version": "0.0.1",
-	"repository": "charliewilco/esm-ts-starter",
+	"repository": "charliewilco/abstract-mutable-store",
 	"license": "Unlicense",
 	"files": [
 		"dist/**/*"

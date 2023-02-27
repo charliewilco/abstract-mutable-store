@@ -1,6 +1,6 @@
 ![Header image for repo](.github/esm-header.png)
 
-<h1 align="center">ES Module Defaults for TS</h1>
+<h1 align="center">Abstract Mutable Store</h1>
 
 [![Unit Tests](https://github.com/charliewilco/esm-ts-defaults/actions/workflows/node.yml/badge.svg)](https://github.com/charliewilco/esm-ts-defaults/actions/workflows/node.yml)
 
