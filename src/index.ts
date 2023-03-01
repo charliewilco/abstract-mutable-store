@@ -45,7 +45,7 @@ export abstract class AbstractStore<T> {
 	 *                     as needed.
 	 * @returns An immutable copy of the updated value.
 	 */
-	public mutate(mutator: (draft: T) => void): T {
+	public safeMutate(mutator: (draft: T) => void): T {
 		let draft = JSON.parse(JSON.stringify(this.value));
 		mutator(draft);
 		this.value = draft;
@@ -79,4 +79,9 @@ export abstract class AbstractStore<T> {
 			listener(newValue);
 		}
 	}
+}
+
+
+export function createStoreShim<T>(store: AbstractStore<T>) {
+	return [store.subscribe.bind(store), store.getSnapshot.bind(store)];
 }
