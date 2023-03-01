@@ -1,7 +1,7 @@
-import { AbstractStore } from "../src";
+import { AbstractMutableStore } from "./abstract-mutable-store";
 
 function createMockStore<T>(initialValue: T) {
-	class MockStore extends AbstractStore<T> {}
+	class MockStore extends AbstractMutableStore<T> {}
 	return new MockStore(initialValue);
 }
 
@@ -54,11 +54,11 @@ describe("AbstractStore", () => {
 	});
 
 	test("should safely mutate the draft value", () => {
-		class TestStore extends AbstractStore<{ count: number }> {}
+		class TestStore extends AbstractMutableStore<{ count: number }> {}
 
 		const store = new TestStore({ count: 0 });
 
-		const result = store.safeMutate((draft) => {
+		const result = store.mutate((draft) => {
 			draft.count += 1;
 		});
 
