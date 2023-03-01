@@ -23,8 +23,8 @@ describe("safelyMutate", () => {
 
 	test("should safely mutate a string", () => {
 		const str = "hello";
-		const newStr = safelyMutate(str, (_) => {
-			_ = "world";
+		const newStr = safelyMutate(str, () => {
+			return "world";
 		});
 		expect(newStr).toBe("world");
 		expect(str).toBe("hello");
