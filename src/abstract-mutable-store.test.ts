@@ -1,68 +1,121 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import { AbstractMutableStore } from "./abstract-mutable-store";
 
-function createMockStore<T>(initialValue: T) {
+function createMockStore<T>(initialValue: T, equalityFn?: (a: T, b: T) => boolean) {
 	class MockStore extends AbstractMutableStore<T> {}
-	return new MockStore(initialValue);
+	return new MockStore(initialValue, equalityFn);
 }
 
-describe("AbstractStore", () => {
-	test("should return the initial value", () => {
+describe("AbstractMutableStore", () => {
+	it("returns the initial value", () => {
 		const store = createMockStore({ prop1: "value1", prop2: 42 });
 
-		expect(store.getSnapshot()).toEqual({ prop1: "value1", prop2: 42 });
+		assert.deepEqual(store.getSnapshot(), { prop1: "value1", prop2: 42 });
 	});
 
-	test("should notify listeners when the value changes", () => {
-		const mockListener = jest.fn();
+	it("notifies listeners when the value changes", () => {
+		const calls: Array<{ prop1: string; prop2: number }> = [];
 		const store = createMockStore({
 			prop1: "value1",
 			prop2: 42,
 		});
 
-		store.subscribe(mockListener);
+		store.subscribe((value) => calls.push(value));
 		store.setValue({ prop1: "newvalue", prop2: 99 });
 
-		expect(mockListener).toHaveBeenCalledTimes(1);
-		expect(mockListener).toHaveBeenCalledWith({ prop1: "newvalue", prop2: 99 });
+		assert.deepEqual(calls, [{ prop1: "newvalue", prop2: 99 }]);
 	});
 
-	test("should not notify listeners when the value is set to the same value", () => {
+	it("does not notify listeners when the value is set to the same value", () => {
 		const store = createMockStore({ prop1: "value1", prop2: 42 });
+		const calls: Array<{ prop1: string; prop2: number }> = [];
 
-		const listener = jest.fn();
-
-		store.subscribe(listener);
+		store.subscribe((value) => calls.push(value));
 		store.setValue({ prop1: "value1", prop2: 42 });
 
-		expect(listener).not.toHaveBeenCalled();
+		assert.deepEqual(calls, []);
 	});
 
-	test("should not notify unsubscribed listeners", () => {
+	it("uses the provided equality function", () => {
+		const store = createMockStore(
+			{ version: 1, value: "old" },
+			(a, b) => a.version === b.version,
+		);
+		const calls: Array<{ version: number; value: string }> = [];
+
+		store.subscribe((value) => calls.push(value));
+		store.setValue({ version: 1, value: "new" });
+		store.setValue({ version: 2, value: "newer" });
+
+		assert.deepEqual(calls, [{ version: 2, value: "newer" }]);
+		assert.deepEqual(store.getSnapshot(), { version: 2, value: "newer" });
+	});
+
+	it("does not notify unsubscribed listeners", () => {
 		const store = createMockStore({ prop1: "value1", prop2: 42 });
 
-		let listener = jest.fn();
-		let listener2 = jest.fn();
-		const unsubscribe = store.subscribe(listener);
+		const calls: Array<{ prop1: string; prop2: number }> = [];
+		const unsubscribedCalls: Array<{ prop1: string; prop2: number }> = [];
+		const unsubscribe = store.subscribe((value) => unsubscribedCalls.push(value));
 		unsubscribe();
 
-		store.subscribe(listener2);
+		store.subscribe((value) => calls.push(value));
 
 		store.setValue({ prop1: "newvalue", prop2: 99 });
 
-		expect(listener).not.toHaveBeenCalled();
-		expect(listener2).toHaveBeenCalledTimes(1);
+		assert.deepEqual(unsubscribedCalls, []);
+		assert.deepEqual(calls, [{ prop1: "newvalue", prop2: 99 }]);
 	});
 
-	test("should safely mutate the draft value", () => {
+	it("allows unsubscribe to be called more than once", () => {
+		const store = createMockStore({ count: 0 });
+		const calls: Array<{ count: number }> = [];
+
+		const unsubscribe = store.subscribe((value) => calls.push(value));
+		unsubscribe();
+		unsubscribe();
+
+		store.setValue({ count: 1 });
+
+		assert.deepEqual(calls, []);
+	});
+
+	it("safely mutates the draft value", () => {
 		class TestStore extends AbstractMutableStore<{ count: number }> {}
 
 		const store = new TestStore({ count: 0 });
+		const calls: Array<{ count: number }> = [];
+		store.subscribe((value) => calls.push(value));
 
 		const result = store.mutate((draft) => {
 			draft.count += 1;
 		});
 
-		expect(result).toEqual({ count: 1 });
-		expect(store.getSnapshot()).toEqual({ count: 1 });
+		assert.deepEqual(result, { count: 1 });
+		assert.deepEqual(store.getSnapshot(), { count: 1 });
+		assert.deepEqual(calls, [{ count: 1 }]);
+	});
+
+	it("uses replacement values returned by mutators", () => {
+		const store = createMockStore({ count: 0 });
+
+		const result = store.mutate(() => ({ count: 10 }));
+
+		assert.deepEqual(result, { count: 10 });
+		assert.deepEqual(store.getSnapshot(), { count: 10 });
+	});
+
+	it("does not notify when a mutation leaves the value equal", () => {
+		const store = createMockStore({ count: 0 });
+		const calls: Array<{ count: number }> = [];
+
+		store.subscribe((value) => calls.push(value));
+		const result = store.mutate((draft) => {
+			draft.count = 0;
+		});
+
+		assert.deepEqual(result, { count: 0 });
+		assert.deepEqual(calls, []);
 	});
 });

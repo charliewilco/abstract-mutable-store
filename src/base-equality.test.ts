@@ -1,53 +1,84 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import { isEqual as checkEquality } from "./base-equality";
 
 describe("checkEquality", () => {
-	test("returns true for identical objects", () => {
+	it("returns true for identical objects", () => {
 		const a = { x: 1, y: 2 };
 		const b = { x: 1, y: 2 };
-		expect(checkEquality(a, b)).toBe(true);
+		assert.equal(checkEquality(a, b), true);
 	});
 
-	test("returns true for arrays with the same contents", () => {
+	it("returns true for arrays with the same contents", () => {
 		const a = [1, 2, 3];
 		const b = [1, 2, 3];
-		expect(checkEquality(a, b)).toBe(true);
+		assert.equal(checkEquality(a, b), true);
 	});
 
-	test("returns false for objects with different values", () => {
+	it("returns false for objects with different values", () => {
 		const a = { x: 1, y: 2 };
 		const b = { x: 1, y: 3 };
-		expect(checkEquality(a, b)).toBe(false);
+		assert.equal(checkEquality(a, b), false);
 	});
 
-	test("returns false for objects with different properties", () => {
+	it("returns false for objects with different properties", () => {
 		const a = { x: 1, y: 2 };
 		const b = { x: 1, z: 2 };
-		expect(checkEquality(a, b)).toBe(false);
+		assert.equal(checkEquality(a, b), false);
 	});
 
-	test("returns false for arrays with different contents", () => {
+	it("returns false for arrays with different contents", () => {
 		const a = [1, 2, 3];
 		const b = [1, 2, 4];
-		expect(checkEquality(a, b)).toBe(false);
+		assert.equal(checkEquality(a, b), false);
 	});
 
-	test("returns false for arrays with different lengths", () => {
+	it("returns false for arrays with different lengths", () => {
 		const a = [1, 2, 3];
 		const b = [1, 2];
-		expect(checkEquality(a, b)).toBe(false);
+		assert.equal(checkEquality(a, b), false);
 	});
 
-	test("returns true for mixed objects and arrays", () => {
+	it("returns true for mixed objects and arrays", () => {
 		const a = { x: 1, y: [2, 3] };
 		const b = { x: 1, y: [2, 3] };
-		expect(checkEquality(a, b)).toBe(true);
+		assert.equal(checkEquality(a, b), true);
 	});
 
-	test("returns true for null values", () => {
-		expect(checkEquality(null, null)).toBe(true);
+	it("returns true for null values", () => {
+		assert.equal(checkEquality(null, null), true);
 	});
 
-	test("returns false for null and undefined values", () => {
-		expect(checkEquality(null, undefined)).toBe(false);
+	it("returns false for null and undefined values", () => {
+		assert.equal(checkEquality(null, undefined), false);
+	});
+
+	it("returns true for matching primitive values", () => {
+		assert.equal(checkEquality("value", "value"), true);
+		assert.equal(checkEquality(1, 1), true);
+		assert.equal(checkEquality(true, true), true);
+	});
+
+	it("returns false for mismatched primitive values", () => {
+		assert.equal(checkEquality("value", "other"), false);
+		assert.equal(checkEquality(1, 2), false);
+		assert.equal(checkEquality(true, false), false);
+	});
+
+	it("does not treat null as equal to NaN", () => {
+		assert.equal(checkEquality(null, NaN), false);
+	});
+
+	it("only treats functions as equal when they are the same reference", () => {
+		const fn = () => undefined;
+
+		assert.equal(checkEquality(fn, fn), true);
+		assert.equal(
+			checkEquality(
+				() => undefined,
+				() => undefined,
+			),
+			false,
+		);
 	});
 });

@@ -1,0 +1,12 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"declaration": false,
+		"module": "node16",
+		"moduleResolution": "node16",
+		"outDir": ".tmp/test",
+		"sourceMap": true,
+		"types": ["node"]
+	},
+	"include": ["src/**/*.ts"]
+}

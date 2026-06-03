@@ -1,5 +1,6 @@
 import { isEqual, type EqualityCheck } from "./base-equality";
-import { mutate } from "./mutate";
+import { mutate, type Mutator } from "./mutate";
+
 /**
  * An abstract class for creating a store that is compliant with `useSyncExternalStore`.
  */
@@ -11,7 +12,10 @@ export abstract class AbstractMutableStore<T> {
 	 *
 	 * @param initialValue The initial value of the store.
 	 */
-	constructor(protected value: T, private equalityFn: EqualityCheck = isEqual) {}
+	constructor(
+		protected value: T,
+		private equalityFn: EqualityCheck<T> = isEqual,
+	) {}
 
 	/**
 	 * Returns a snapshot of the current value of the store.
@@ -37,21 +41,23 @@ export abstract class AbstractMutableStore<T> {
 	}
 
 	/**
-	 * Applies the given mutation function to a draft of the current value, and returns an immutable
-	 * copy of the updated value.
+	 * Applies the given mutation function to a draft of the current value.
 	 *
 	 * @param mutationFn - A callback function that takes a draft of the current value, and mutates it
 	 *                     as needed.
-	 * @returns An immutable copy of the updated value.
+	 * @returns The updated value.
 	 */
-	public mutate(mutator: (draft: T) => void): T {
-		let draft = mutate(this.value, mutator);
-		this.value = draft;
-		let immutableValue = JSON.parse(JSON.stringify(this.value));
+	public mutate(mutator: Mutator<T>): T {
+		const newValue = mutate(this.value, mutator);
 
-		this.notifyValueChanged(immutableValue);
+		if (this.equalityFn(this.value, newValue)) {
+			return this.value;
+		}
 
-		return immutableValue;
+		this.value = newValue;
+		this.notifyValueChanged(newValue);
+
+		return newValue;
 	}
 	/**
 	 * Subscribes a listener function to changes in the store and returns an unsubscribe function.

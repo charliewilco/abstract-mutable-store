@@ -1,18 +1,14 @@
 {
 	"compilerOptions": {
-		"outDir": "dist",
 		"module": "esnext",
-		"target": "esnext",
-		"lib": ["es2017", "dom"],
-		"sourceMap": true,
+		"target": "es2022",
+		"lib": ["es2022"],
 		"allowJs": false,
-		"declaration": true,
 		"esModuleInterop": true,
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"rootDir": "src",
 		"strict": true,
-		"skipLibCheck": true,
-		"types": ["jest"]
+		"skipLibCheck": true
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules"]

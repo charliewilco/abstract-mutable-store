@@ -3,20 +3,16 @@ name: Unit Tests
 on: [push, pull_request]
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [16, 18, 19]
+        node: [22, 24]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - name: Install Dependencies & Build
-        run: |
-          npm ci
-          npm run build
-      - name: Test
-        run: npm test -- --ci --coverage --runInBand
+      - run: npm ci
+      - run: npm run check
