@@ -25,6 +25,13 @@ npm install @charliewilco/abstract-mutable-store
   updated value.
 - `subscribe(listener)` registers a listener and returns an unsubscribe function.
 
+By default, `mutate()` clones state with
+[`structuredClone`](https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone), so
+state can include values such as `Date`, `Map`, `Set`, `undefined` fields, and circular references.
+Values that `structuredClone` cannot clone, such as functions, `WeakMap`, `WeakSet`, and symbol
+values, require a custom clone function. Custom class instances should also provide a clone function
+when prototype identity or methods need to be preserved.
+
 To use it, extend `AbstractMutableStore` with the domain-specific methods your app needs:
 
 ```ts
@@ -120,15 +127,41 @@ function App() {
 }
 ```
 
-## Custom equality
+## Custom clone and equality
 
-Stores use a JSON-based equality check by default. You can pass a custom equality function when
-only part of the state should determine whether subscribers are notified:
+Stores use a cycle-aware deep equality check by default. It compares `Date` values by timestamp,
+preserves the difference between missing fields and `undefined` fields, and treats functions as
+equal only when they are the same reference.
+
+You can pass a custom equality function when only part of the state should determine whether
+subscribers are notified:
 
 ```ts
 class VersionedStore extends AbstractMutableStore<{ version: number; value: string }> {
 	constructor() {
 		super({ version: 1, value: "initial" }, (a, b) => a.version === b.version);
+	}
+}
+```
+
+For state that needs custom cloning semantics, pass an options object with `clone`. The options
+object can also contain `equality`:
+
+```ts
+interface State {
+	callback: () => void;
+	label: string;
+}
+
+class CallbackStore extends AbstractMutableStore<State> {
+	constructor(callback: () => void) {
+		super(
+			{ callback, label: "ready" },
+			{
+				clone: (state) => ({ ...state }),
+				equality: (a, b) => a.label === b.label && a.callback === b.callback,
+			},
+		);
 	}
 }
 ```

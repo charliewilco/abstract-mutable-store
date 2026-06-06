@@ -45,6 +45,72 @@ describe("checkEquality", () => {
 		assert.equal(checkEquality(a, b), true);
 	});
 
+	it("returns true for Date values with the same timestamp", () => {
+		const a = { createdAt: new Date("2026-06-06T12:00:00.000Z") };
+		const b = { createdAt: new Date("2026-06-06T12:00:00.000Z") };
+
+		assert.equal(checkEquality(a, b), true);
+	});
+
+	it("returns false for Date values with different timestamps", () => {
+		const a = { createdAt: new Date("2026-06-06T12:00:00.000Z") };
+		const b = { createdAt: new Date("2026-06-06T12:00:01.000Z") };
+
+		assert.equal(checkEquality(a, b), false);
+	});
+
+	it("preserves the difference between undefined fields and missing fields", () => {
+		assert.equal(checkEquality({ optional: undefined }, { optional: undefined }), true);
+		assert.equal(checkEquality({ optional: undefined }, {}), false);
+	});
+
+	it("returns true for Map and Set values with matching contents", () => {
+		const a = {
+			ids: new Set([1, 2]),
+			labels: new Map([
+				["one", "first"],
+				["two", "second"],
+			]),
+		};
+		const b = {
+			ids: new Set([2, 1]),
+			labels: new Map([
+				["two", "second"],
+				["one", "first"],
+			]),
+		};
+
+		assert.equal(checkEquality(a, b), true);
+	});
+
+	it("returns true for equivalent circular references", () => {
+		interface CircularState {
+			name: string;
+			self?: CircularState;
+		}
+
+		const a: CircularState = { name: "same" };
+		const b: CircularState = { name: "same" };
+		a.self = a;
+		b.self = b;
+
+		assert.equal(checkEquality(a, b), true);
+	});
+
+	it("returns false for different circular references", () => {
+		interface CircularState {
+			name: string;
+			self?: CircularState;
+		}
+
+		const a: CircularState = { name: "same" };
+		const b: CircularState = { name: "same" };
+		a.self = a;
+		b.self = { name: "different" };
+
+		assert.equal(checkEquality(a, b), false);
+	});
+
 	it("returns true for null values", () => {
 		assert.equal(checkEquality(null, null), true);
 	});

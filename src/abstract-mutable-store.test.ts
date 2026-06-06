@@ -52,6 +52,43 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(store.getSnapshot(), { version: 2, value: "newer" });
 	});
 
+	it("uses the provided equality function from options", () => {
+		class TestStore extends AbstractMutableStore<{ version: number; value: string }> {
+			constructor() {
+				super({ version: 1, value: "old" }, { equality: (a, b) => a.version === b.version });
+			}
+		}
+
+		const store = new TestStore();
+		const calls: Array<{ version: number; value: string }> = [];
+
+		store.subscribe((value) => calls.push(value));
+		store.setValue({ version: 1, value: "new" });
+		store.setValue({ version: 2, value: "newer" });
+
+		assert.deepEqual(calls, [{ version: 2, value: "newer" }]);
+		assert.deepEqual(store.getSnapshot(), { version: 2, value: "newer" });
+	});
+
+	it("uses the provided clone function from options", () => {
+		const callback = () => "value";
+
+		class TestStore extends AbstractMutableStore<{ name: string; callback: () => string }> {
+			constructor() {
+				super({ name: "before", callback }, { clone: (value) => ({ ...value }) });
+			}
+		}
+
+		const store = new TestStore();
+
+		const result = store.mutate((draft) => {
+			draft.name = "after";
+		});
+
+		assert.deepEqual(result, { name: "after", callback });
+		assert.deepEqual(store.getSnapshot(), { name: "after", callback });
+	});
+
 	it("does not notify unsubscribed listeners", () => {
 		const store = createMockStore({ prop1: "value1", prop2: 42 });
 

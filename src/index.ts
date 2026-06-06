@@ -1,3 +1,12 @@
-export { AbstractMutableStore } from "./abstract-mutable-store";
+export {
+	AbstractMutableStore,
+	type AbstractMutableStoreOptions,
+} from "./abstract-mutable-store";
 export { isEqual, type EqualityCheck } from "./base-equality";
-export { mutate, type Mutator } from "./mutate";
+export {
+	cloneValue,
+	mutate,
+	type CloneValue,
+	type MutateOptions,
+	type Mutator,
+} from "./mutate";
