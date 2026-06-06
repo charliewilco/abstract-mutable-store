@@ -1,11 +1,18 @@
 import { isEqual, type EqualityCheck } from "./base-equality";
-import { mutate, type Mutator } from "./mutate";
+import { cloneValue, mutate, type CloneValue, type Mutator } from "./mutate";
+
+export interface AbstractMutableStoreOptions<T> {
+	equality?: EqualityCheck<T>;
+	clone?: CloneValue<T>;
+}
 
 /**
  * An abstract class for creating a store that is compliant with `useSyncExternalStore`.
  */
 export abstract class AbstractMutableStore<T> {
 	private listeners: Set<(value: T) => void> = new Set();
+	private equalityFn: EqualityCheck<T>;
+	private cloneFn: CloneValue<T>;
 
 	/**
 	 * Creates a new instance of `AbstractStore`.
@@ -14,8 +21,16 @@ export abstract class AbstractMutableStore<T> {
 	 */
 	constructor(
 		protected value: T,
-		private equalityFn: EqualityCheck<T> = isEqual,
-	) {}
+		options: EqualityCheck<T> | AbstractMutableStoreOptions<T> = isEqual,
+	) {
+		if (typeof options === "function") {
+			this.equalityFn = options;
+			this.cloneFn = cloneValue;
+		} else {
+			this.equalityFn = options.equality ?? isEqual;
+			this.cloneFn = options.clone ?? cloneValue;
+		}
+	}
 
 	/**
 	 * Returns a snapshot of the current value of the store.
@@ -48,7 +63,7 @@ export abstract class AbstractMutableStore<T> {
 	 * @returns The updated value.
 	 */
 	public mutate(mutator: Mutator<T>): T {
-		const newValue = mutate(this.value, mutator);
+		const newValue = mutate(this.value, mutator, { clone: this.cloneFn });
 
 		if (this.equalityFn(this.value, newValue)) {
 			return this.value;
