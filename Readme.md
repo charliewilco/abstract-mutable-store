@@ -4,8 +4,13 @@
 
 [![Publish](https://github.com/charliewilco/abstract-mutable-store/actions/workflows/publish.yml/badge.svg)](https://github.com/charliewilco/abstract-mutable-store/actions/workflows/publish.yml)
 
-An abstract class for creating a tiny mutable store compatible with
-[`useSyncExternalStore`](https://react.dev/reference/react/useSyncExternalStore).
+Abstract Mutable Store is a tiny TypeScript base class for building app-specific external
+stores that need [`useSyncExternalStore`](https://react.dev/reference/react/useSyncExternalStore)
+compatibility. It owns the common snapshot, subscription, mutation, cloning, and equality behavior
+so concrete store classes can focus on domain methods.
+
+The package is intentionally a store primitive, not a React hook library or an immutable-state
+framework. React is the primary integration target, but the core API is framework-agnostic.
 
 The package publishes both ESM and CommonJS bundles, plus TypeScript declarations.
 
@@ -17,7 +22,8 @@ npm install @charliewilco/abstract-mutable-store
 
 ## Usage
 
-`AbstractMutableStore` provides the common store behavior:
+`AbstractMutableStore` is the primary API. Extend it with the domain-specific methods your app
+needs:
 
 - `getSnapshot()` reads the current value.
 - `setValue(value)` replaces the value and notifies subscribers when it changed.
@@ -25,14 +31,24 @@ npm install @charliewilco/abstract-mutable-store
   updated value.
 - `subscribe(listener)` registers a listener and returns an unsubscribe function.
 
+The standalone `mutate`, `cloneValue`, and `isEqual` exports are helpers that use the same default
+state semantics as the store. They are not a separate store API.
+
+### State model
+
 By default, `mutate()` clones state with
 [`structuredClone`](https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone), so
-state can include values such as `Date`, `Map`, `Set`, `undefined` fields, and circular references.
-Values that `structuredClone` cannot clone, such as functions, `WeakMap`, `WeakSet`, and symbol
-values, require a custom clone function. Custom class instances should also provide a clone function
-when prototype identity or methods need to be preserved.
+state can include primitives, arrays, plain objects, `Date`, `Map`, `Set`, `ArrayBuffer`, typed
+arrays, `undefined` fields, and circular references. The default equality function is cycle-aware
+and compares those shapes without JSON serialization.
 
-To use it, extend `AbstractMutableStore` with the domain-specific methods your app needs:
+Values that `structuredClone` cannot clone, such as functions, `WeakMap`, `WeakSet`, promises, and
+symbol values inside objects, require a custom clone function before they can be used with
+`mutate()`. Custom class instances should also provide a clone function when prototype identity or
+methods need to be preserved.
+
+Use `setValue()` or a custom `clone` option when replacement semantics are clearer than draft
+mutation.
 
 ```ts
 import { AbstractMutableStore } from "@charliewilco/abstract-mutable-store";
@@ -165,6 +181,14 @@ class CallbackStore extends AbstractMutableStore<State> {
 	}
 }
 ```
+
+## Future API ideas
+
+This package currently promises the subclass-based store primitive described above. A concrete
+`createStore` helper is tracked in
+[#3](https://github.com/charliewilco/abstract-mutable-store/issues/3), and expanded React
+integration guidance is tracked in
+[#6](https://github.com/charliewilco/abstract-mutable-store/issues/6).
 
 ## Development
 
