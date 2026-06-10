@@ -20,15 +20,15 @@
 	"sideEffects": false,
 	"scripts": {
 		"prepare": "npm run build",
-		"clean": "rm -rf dist .tmp",
+		"clean": "rm -rf dist",
 		"prebuild": "npm run clean",
 		"build": "npm run build:types && rolldown -c",
 		"build:types": "tsc -p tsconfig.build.json",
 		"typecheck": "npm run typecheck:src && npm run typecheck:test",
 		"typecheck:src": "tsc -p tsconfig.build.json --noEmit",
 		"typecheck:test": "tsc -p tsconfig.test.json --noEmit",
-		"pretest": "rm -rf .tmp/test && tsc -p tsconfig.test.json",
-		"test": "node --test .tmp/test/*.test.js",
+		"pretest": "npm run typecheck:test",
+		"test": "node --import tsx --test src/*.test.ts",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"check": "npm run format:check && npm run typecheck && npm test && npm run build"
@@ -37,6 +37,7 @@
 		"@types/node": "^24.12.4",
 		"prettier": "^3.8.3",
 		"rolldown": "^1.0.3",
+		"tsx": "^4.22.4",
 		"typescript": "^6.0.3"
 	},
 	"prettier": {
