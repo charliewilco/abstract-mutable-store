@@ -12,7 +12,7 @@ compatibility so concrete store classes can focus on domain behavior.
 The package is intentionally a store primitive, not a React hook library or an immutable-state
 framework. React is the primary integration target, but the core API is framework-agnostic.
 
-The package publishes both ESM and CommonJS bundles, plus TypeScript declarations.
+The package publishes an ESM bundle and TypeScript declarations.
 
 ## Install
 
