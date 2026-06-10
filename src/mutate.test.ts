@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, test } from "node:test";
 import { mutate as safelyMutate } from "./mutate";
 
 describe("safelyMutate", () => {
-	it("safely mutates an object", () => {
+	test("safely mutates an object", () => {
 		const obj = { name: "John", age: 25 };
 		const newObj = safelyMutate(obj, (draft) => {
 			draft.name = "Jane";
@@ -13,7 +13,7 @@ describe("safelyMutate", () => {
 		assert.deepEqual(obj, { name: "John", age: 25 });
 	});
 
-	it("safely mutates an array", () => {
+	test("safely mutates an array", () => {
 		const arr = [1, 2, 3];
 		const newArr = safelyMutate(arr, (draft) => {
 			draft.push(4);
@@ -23,7 +23,7 @@ describe("safelyMutate", () => {
 		assert.deepEqual(arr, [1, 2, 3]);
 	});
 
-	it("clones Date values without converting them to strings", () => {
+	test("clones Date values without converting them to strings", () => {
 		const obj = { createdAt: new Date("2026-06-06T12:00:00.000Z"), name: "draft" };
 		const newObj = safelyMutate(obj, (draft) => {
 			draft.createdAt.setUTCFullYear(2027);
@@ -36,7 +36,7 @@ describe("safelyMutate", () => {
 		assert.deepEqual(obj, { createdAt: new Date("2026-06-06T12:00:00.000Z"), name: "draft" });
 	});
 
-	it("preserves undefined fields when cloning objects", () => {
+	test("preserves undefined fields when cloning objects", () => {
 		const obj: { name: string; optional: string | undefined } = {
 			name: "before",
 			optional: undefined,
@@ -52,7 +52,7 @@ describe("safelyMutate", () => {
 		assert.deepEqual(obj, { name: "before", optional: undefined });
 	});
 
-	it("clones Map and Set values", () => {
+	test("clones Map and Set values", () => {
 		const obj = {
 			ids: new Set([1, 2]),
 			labels: new Map([
@@ -79,7 +79,7 @@ describe("safelyMutate", () => {
 		]);
 	});
 
-	it("preserves circular references when cloning objects", () => {
+	test("preserves circular references when cloning objects", () => {
 		interface CircularState {
 			name: string;
 			self?: CircularState;
@@ -99,7 +99,7 @@ describe("safelyMutate", () => {
 		assert.equal(newObj.name, "after");
 	});
 
-	it("throws for function values with the default clone behavior", () => {
+	test("throws for function values with the default clone behavior", () => {
 		const obj = { name: "before", callback: () => "value" };
 
 		assert.throws(
@@ -111,7 +111,7 @@ describe("safelyMutate", () => {
 		);
 	});
 
-	it("uses a custom clone function for state that structuredClone cannot clone", () => {
+	test("uses a custom clone function for state that structuredClone cannot clone", () => {
 		const obj = { name: "before", callback: () => "value" };
 		const newObj = safelyMutate(
 			obj,
@@ -126,7 +126,7 @@ describe("safelyMutate", () => {
 		assert.deepEqual(obj, { name: "before", callback: obj.callback });
 	});
 
-	it("uses returned string values", () => {
+	test("uses returned string values", () => {
 		const str = "hello";
 		const newStr = safelyMutate(str, () => {
 			return "world";
@@ -135,7 +135,7 @@ describe("safelyMutate", () => {
 		assert.equal(str, "hello");
 	});
 
-	it("uses returned number values", () => {
+	test("uses returned number values", () => {
 		const value = 1;
 		const newValue = safelyMutate(value, () => 2);
 
@@ -143,7 +143,7 @@ describe("safelyMutate", () => {
 		assert.equal(value, 1);
 	});
 
-	it("uses replacement values returned for objects", () => {
+	test("uses replacement values returned for objects", () => {
 		const obj = { name: "John", age: 25 };
 		const newObj = safelyMutate(obj, () => ({ name: "Jane", age: 30 }));
 
@@ -151,7 +151,7 @@ describe("safelyMutate", () => {
 		assert.deepEqual(obj, { name: "John", age: 25 });
 	});
 
-	it("does not mutate the original value", () => {
+	test("does not mutate the original value", () => {
 		const obj = { name: "John", age: 25 };
 		safelyMutate(obj, (draft) => {
 			draft.name = "Jane";
@@ -171,7 +171,7 @@ describe("safelyMutate", () => {
 		assert.equal(str, "hello");
 	});
 
-	it("returns the original primitive value when no replacement is returned", () => {
+	test("returns the original primitive value when no replacement is returned", () => {
 		const value = 1;
 		const newValue = safelyMutate(value, () => {});
 

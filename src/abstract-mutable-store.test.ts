@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, test } from "node:test";
 import { AbstractMutableStore } from "./abstract-mutable-store";
 
 function createMockStore<T>(initialValue: T, equalityFn?: (a: T, b: T) => boolean) {
@@ -8,13 +8,13 @@ function createMockStore<T>(initialValue: T, equalityFn?: (a: T, b: T) => boolea
 }
 
 describe("AbstractMutableStore", () => {
-	it("returns the initial value", () => {
+	test("returns the initial value", () => {
 		const store = createMockStore({ prop1: "value1", prop2: 42 });
 
 		assert.deepEqual(store.getSnapshot(), { prop1: "value1", prop2: 42 });
 	});
 
-	it("notifies listeners when the value changes", () => {
+	test("notifies listeners when the value changes", () => {
 		const calls: Array<{ prop1: string; prop2: number }> = [];
 		const store = createMockStore({
 			prop1: "value1",
@@ -27,7 +27,7 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(calls, [{ prop1: "newvalue", prop2: 99 }]);
 	});
 
-	it("does not notify listeners when the value is set to the same value", () => {
+	test("does not notify listeners when the value is set to the same value", () => {
 		const store = createMockStore({ prop1: "value1", prop2: 42 });
 		const calls: Array<{ prop1: string; prop2: number }> = [];
 
@@ -37,7 +37,7 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(calls, []);
 	});
 
-	it("uses the provided equality function", () => {
+	test("uses the provided equality function", () => {
 		const store = createMockStore(
 			{ version: 1, value: "old" },
 			(a, b) => a.version === b.version,
@@ -52,7 +52,7 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(store.getSnapshot(), { version: 2, value: "newer" });
 	});
 
-	it("uses the provided equality function from options", () => {
+	test("uses the provided equality function from options", () => {
 		class TestStore extends AbstractMutableStore<{ version: number; value: string }> {
 			constructor() {
 				super({ version: 1, value: "old" }, { equality: (a, b) => a.version === b.version });
@@ -70,7 +70,7 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(store.getSnapshot(), { version: 2, value: "newer" });
 	});
 
-	it("uses the provided clone function from options", () => {
+	test("uses the provided clone function from options", () => {
 		const callback = () => "value";
 
 		class TestStore extends AbstractMutableStore<{ name: string; callback: () => string }> {
@@ -89,7 +89,7 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(store.getSnapshot(), { name: "after", callback });
 	});
 
-	it("does not notify unsubscribed listeners", () => {
+	test("does not notify unsubscribed listeners", () => {
 		const store = createMockStore({ prop1: "value1", prop2: 42 });
 
 		const calls: Array<{ prop1: string; prop2: number }> = [];
@@ -105,7 +105,7 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(calls, [{ prop1: "newvalue", prop2: 99 }]);
 	});
 
-	it("allows unsubscribe to be called more than once", () => {
+	test("allows unsubscribe to be called more than once", () => {
 		const store = createMockStore({ count: 0 });
 		const calls: Array<{ count: number }> = [];
 
@@ -118,7 +118,7 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(calls, []);
 	});
 
-	it("safely mutates the draft value", () => {
+	test("safely mutates the draft value", () => {
 		class TestStore extends AbstractMutableStore<{ count: number }> {}
 
 		const store = new TestStore({ count: 0 });
@@ -134,7 +134,7 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(calls, [{ count: 1 }]);
 	});
 
-	it("uses replacement values returned by mutators", () => {
+	test("uses replacement values returned by mutators", () => {
 		const store = createMockStore({ count: 0 });
 
 		const result = store.mutate(() => ({ count: 10 }));
@@ -143,7 +143,7 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(store.getSnapshot(), { count: 10 });
 	});
 
-	it("does not notify when a mutation leaves the value equal", () => {
+	test("does not notify when a mutation leaves the value equal", () => {
 		const store = createMockStore({ count: 0 });
 		const calls: Array<{ count: number }> = [];
 
