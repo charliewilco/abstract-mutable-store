@@ -96,15 +96,19 @@ const store = new AbstractMutableStore({ foo: 1 });
 
 ### With React
 
+Create app-wide store instances outside React render paths, then subscribe to them with
+`useSyncExternalStore`. React will call `getSnapshot()` during render, subscribe after commit, and
+re-render only after the store notifies it that a committed value changed.
+
 ```tsx
 import { AbstractMutableStore } from "@charliewilco/abstract-mutable-store";
 import { useSyncExternalStore } from "react";
 
-interface State {
+interface CounterState {
 	count: number;
 }
 
-class CountStore extends AbstractMutableStore<State> {
+class CounterStore extends AbstractMutableStore<CounterState> {
 	constructor() {
 		super({ count: 0 });
 	}
@@ -122,26 +126,77 @@ class CountStore extends AbstractMutableStore<State> {
 	}
 }
 
-const store = new CountStore();
+const counterStore = new CounterStore();
 
-function SyncedCount() {
-	const { count } = useSyncExternalStore(
-		(cb) => store.subscribe(cb),
-		() => store.getSnapshot(),
+function useCounterState() {
+	return useSyncExternalStore(
+		(listener) => counterStore.subscribe(listener),
+		() => counterStore.getSnapshot(),
+		() => counterStore.getSnapshot(),
 	);
+}
 
-	return <h1>Count: {count}</h1>;
+function Counter() {
+	const { count } = useCounterState();
+
+	return (
+		<section>
+			<h1>Count: {count}</h1>
+			<button type="button" onClick={() => counterStore.decrement()}>
+				Decrement
+			</button>
+			<button type="button" onClick={() => counterStore.increment()}>
+				Increment
+			</button>
+		</section>
+	);
 }
 
 function App() {
-	return (
-		<div>
-			<SyncedCount />
-			<button onClick={() => store.increment()}>Increment</button>
-		</div>
-	);
+	return <Counter />;
 }
 ```
+
+Keep the store instance stable. A module-level singleton is appropriate for shared client-side app
+state, because every component subscribes to the same listener set and reads the same snapshot. Do
+not create a new store in a component body; that resets state on render and gives React a different
+subscription target. If the state is request-specific or user-specific during server rendering,
+create the store in that request scope and pass it through your app rather than sharing one process
+singleton.
+
+Subscriptions are change notifications, not event replay. `subscribe(listener)` stores the listener
+and returns an unsubscribe function; it does not call the listener immediately. React gets the first
+value from `getSnapshot()`, then the store calls listeners only when `setValue()` or `mutate()`
+commits a value that is not equal according to the store equality function. Avoid mutating the object
+returned by `getSnapshot()` directly; expose domain methods that call `setValue()` or `mutate()` so
+the store can clone, compare, update, and notify consistently.
+
+The wrapper functions around `subscribe()` and `getSnapshot()` are intentional. Class methods are
+not automatically bound in JavaScript, so passing `counterStore.subscribe` directly would lose its
+`this` value.
+
+This package does not currently export a React helper or selector hook. Read the full store snapshot
+with `useSyncExternalStore` and derive values during render, or split state into smaller stores when
+components need narrower updates. A future `useStore()` or `useStoreSelector()` API should live in a
+separate React entrypoint with React as a peer dependency, keeping React out of the core package
+dependency graph.
+
+### Compared with BehaviorSubject
+
+`BehaviorSubject` from RxJS is a close mental model for React external stores: it keeps a current
+value, lets subscribers observe future changes, and can expose the current value synchronously for
+`useSyncExternalStore`.
+
+`AbstractMutableStore` is intentionally narrower. It is useful when you want a small, framework-free
+store class with domain methods, built-in clone/equality behavior, and no observable pipeline API.
+Instead of pushing arbitrary values through `.next()`, consumers call methods such as `increment()`
+or `renameProject()` that decide whether to use `setValue()` or `mutate()`. Subscribers are notified
+only after the committed value changes according to the store equality function.
+
+Use `BehaviorSubject` when your app already depends on RxJS or needs observable composition,
+operators, multicasting, cancellation, or stream interop. Use this package when the store is mostly
+a synchronous state holder for React-compatible snapshots and you want the public API to be a
+domain-specific class rather than an observable stream.
 
 ## Custom clone and equality
 
@@ -186,9 +241,9 @@ class CallbackStore extends AbstractMutableStore<State> {
 
 This package currently promises the subclass-based store primitive described above. A concrete
 `createStore` helper is tracked in
-[#3](https://github.com/charliewilco/abstract-mutable-store/issues/3), and expanded React
-integration guidance is tracked in
-[#6](https://github.com/charliewilco/abstract-mutable-store/issues/6).
+[#3](https://github.com/charliewilco/abstract-mutable-store/issues/3). React helper hooks or
+selector support should be introduced only as a separate optional entrypoint, not as part of the
+framework-agnostic core export.
 
 ## Development
 
