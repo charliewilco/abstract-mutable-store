@@ -181,6 +181,23 @@ components need narrower updates. A future `useStore()` or `useStoreSelector()` 
 separate React entrypoint with React as a peer dependency, keeping React out of the core package
 dependency graph.
 
+### Compared with BehaviorSubject
+
+`BehaviorSubject` from RxJS is a close mental model for React external stores: it keeps a current
+value, lets subscribers observe future changes, and can expose the current value synchronously for
+`useSyncExternalStore`.
+
+`AbstractMutableStore` is intentionally narrower. It is useful when you want a small, framework-free
+store class with domain methods, built-in clone/equality behavior, and no observable pipeline API.
+Instead of pushing arbitrary values through `.next()`, consumers call methods such as `increment()`
+or `renameProject()` that decide whether to use `setValue()` or `mutate()`. Subscribers are notified
+only after the committed value changes according to the store equality function.
+
+Use `BehaviorSubject` when your app already depends on RxJS or needs observable composition,
+operators, multicasting, cancellation, or stream interop. Use this package when the store is mostly
+a synchronous state holder for React-compatible snapshots and you want the public API to be a
+domain-specific class rather than an observable stream.
+
 ## Custom clone and equality
 
 Stores use a cycle-aware deep equality check by default. It compares `Date` values by timestamp,
