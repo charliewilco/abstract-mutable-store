@@ -81,7 +81,7 @@ describe("AbstractMutableStore", () => {
 
 		const store = new TestStore();
 
-		const result = store.mutate((draft) => {
+		const result = store.update((draft) => {
 			draft.name = "after";
 		});
 
@@ -118,14 +118,14 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(calls, []);
 	});
 
-	it("safely mutates the draft value", () => {
+	it("updates the store by mutating a draft value", () => {
 		class TestStore extends AbstractMutableStore<{ count: number }> {}
 
 		const store = new TestStore({ count: 0 });
 		const calls: Array<{ count: number }> = [];
 		store.subscribe((value) => calls.push(value));
 
-		const result = store.mutate((draft) => {
+		const result = store.update((draft) => {
 			draft.count += 1;
 		});
 
@@ -134,25 +134,76 @@ describe("AbstractMutableStore", () => {
 		assert.deepEqual(calls, [{ count: 1 }]);
 	});
 
-	it("uses replacement values returned by mutators", () => {
+	it("uses replacement values returned by updaters", () => {
 		const store = createMockStore({ count: 0 });
 
-		const result = store.mutate(() => ({ count: 10 }));
+		const result = store.update(() => ({ count: 10 }));
 
 		assert.deepEqual(result, { count: 10 });
 		assert.deepEqual(store.getSnapshot(), { count: 10 });
 	});
 
-	it("does not notify when a mutation leaves the value equal", () => {
+	it("does not notify when an update leaves the value equal", () => {
 		const store = createMockStore({ count: 0 });
 		const calls: Array<{ count: number }> = [];
 
 		store.subscribe((value) => calls.push(value));
-		const result = store.mutate((draft) => {
+		const result = store.update((draft) => {
 			draft.count = 0;
 		});
 
 		assert.deepEqual(result, { count: 0 });
 		assert.deepEqual(calls, []);
+	});
+
+	it("treats readonly state as mutable inside update drafts", () => {
+		interface Todo {
+			readonly id: string;
+			readonly title: string;
+			readonly done: boolean;
+		}
+
+		interface TodoState {
+			readonly todos: ReadonlyArray<Todo>;
+			readonly meta: {
+				readonly completedCount: number;
+			};
+		}
+
+		class TodoStore extends AbstractMutableStore<TodoState> {
+			completeTodo(id: string) {
+				return this.update((draft) => {
+					const todo = draft.todos.find((item) => item.id === id);
+
+					if (todo) {
+						todo.done = true;
+						draft.meta.completedCount += 1;
+					}
+				});
+			}
+		}
+
+		const store = new TodoStore({
+			todos: [{ id: "1", title: "Draft docs", done: false }],
+			meta: { completedCount: 0 },
+		});
+
+		const result = store.completeTodo("1");
+
+		assert.deepEqual(result, {
+			todos: [{ id: "1", title: "Draft docs", done: true }],
+			meta: { completedCount: 1 },
+		});
+	});
+
+	it("keeps mutate as an alias for update", () => {
+		const store = createMockStore({ count: 0 });
+
+		const result = store.mutate((draft) => {
+			draft.count += 1;
+		});
+
+		assert.deepEqual(result, { count: 1 });
+		assert.deepEqual(store.getSnapshot(), { count: 1 });
 	});
 });
