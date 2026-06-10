@@ -4,10 +4,10 @@
 
 [![Publish](https://github.com/charliewilco/abstract-mutable-store/actions/workflows/publish.yml/badge.svg)](https://github.com/charliewilco/abstract-mutable-store/actions/workflows/publish.yml)
 
-Abstract Mutable Store is a tiny TypeScript base class for building app-specific external
-stores that need [`useSyncExternalStore`](https://react.dev/reference/react/useSyncExternalStore)
-compatibility. It owns the common snapshot, subscription, mutation, cloning, and equality behavior
-so concrete store classes can focus on domain methods.
+Abstract Mutable Store is a tiny TypeScript base class for building app-specific external stores
+whose domain methods update state by mutating drafts. It owns the common snapshot, subscription,
+draft cloning, equality, and [`useSyncExternalStore`](https://react.dev/reference/react/useSyncExternalStore)
+compatibility so concrete store classes can focus on domain behavior.
 
 The package is intentionally a store primitive, not a React hook library or an immutable-state
 framework. React is the primary integration target, but the core API is framework-agnostic.
@@ -27,16 +27,65 @@ needs:
 
 - `getSnapshot()` reads the current value.
 - `setValue(value)` replaces the value and notifies subscribers when it changed.
-- `mutate(mutator)` clones the current value, lets you mutate the draft, then stores the
+- `update(updater)` clones the current value, lets you mutate the draft, then stores the
   updated value.
+- `mutate(mutator)` is a compatibility alias for `update(updater)`.
 - `subscribe(listener)` registers a listener and returns an unsubscribe function.
 
 The standalone `mutate`, `cloneValue`, and `isEqual` exports are helpers that use the same default
 state semantics as the store. They are not a separate store API.
 
+### Draft authoring model
+
+Store methods should usually read like ordinary domain operations. Mutate the draft directly inside
+`update()`, and let the store handle cloning, equality, committing, and notifying subscribers:
+
+```ts
+interface Todo {
+	readonly id: string;
+	readonly title: string;
+	readonly done: boolean;
+}
+
+interface TodoState {
+	readonly todos: ReadonlyArray<Todo>;
+}
+
+class TodoStore extends AbstractMutableStore<TodoState> {
+	addTodo(title: string) {
+		this.update((draft) => {
+			draft.todos.push({
+				id: crypto.randomUUID(),
+				title,
+				done: false,
+			});
+		});
+	}
+
+	completeTodo(id: string) {
+		this.update((draft) => {
+			const todo = draft.todos.find((item) => item.id === id);
+
+			if (todo) {
+				todo.done = true;
+			}
+		});
+	}
+}
+```
+
+Drafts are typed as mutable even when the public snapshot type uses `readonly` fields or
+`ReadonlyArray`. That is a TypeScript-only authoring convenience; snapshots returned from
+`getSnapshot()` should still be treated as store-owned values and updated through domain methods.
+
+This is inspired by Immer's authoring model, but it is not an Immer replacement. The default draft
+behavior uses `structuredClone()` before running your updater, then the store's equality function
+decides whether to commit and notify. It does not provide proxy-based structural sharing, patch
+generation, or Immer's full collection of draft semantics.
+
 ### State model
 
-By default, `mutate()` clones state with
+By default, `update()` clones state with
 [`structuredClone`](https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone), so
 state can include primitives, arrays, plain objects, `Date`, `Map`, `Set`, `ArrayBuffer`, typed
 arrays, `undefined` fields, and circular references. The default equality function is cycle-aware
@@ -44,7 +93,7 @@ and compares those shapes without JSON serialization.
 
 Values that `structuredClone` cannot clone, such as functions, `WeakMap`, `WeakSet`, promises, and
 symbol values inside objects, require a custom clone function before they can be used with
-`mutate()`. Custom class instances should also provide a clone function when prototype identity or
+`update()`. Custom class instances should also provide a clone function when prototype identity or
 methods need to be preserved.
 
 Use `setValue()` or a custom `clone` option when replacement semantics are clearer than draft
@@ -63,13 +112,13 @@ class CountStore extends AbstractMutableStore<State> {
 	}
 
 	increment() {
-		this.mutate((draft) => {
+		this.update((draft) => {
 			draft.count += 1;
 		});
 	}
 
 	decrement() {
-		this.mutate((draft) => {
+		this.update((draft) => {
 			draft.count -= 1;
 		});
 	}
@@ -114,13 +163,13 @@ class CounterStore extends AbstractMutableStore<CounterState> {
 	}
 
 	increment() {
-		this.mutate((draft) => {
+		this.update((draft) => {
 			draft.count += 1;
 		});
 	}
 
 	decrement() {
-		this.mutate((draft) => {
+		this.update((draft) => {
 			draft.count -= 1;
 		});
 	}
@@ -166,9 +215,9 @@ singleton.
 
 Subscriptions are change notifications, not event replay. `subscribe(listener)` stores the listener
 and returns an unsubscribe function; it does not call the listener immediately. React gets the first
-value from `getSnapshot()`, then the store calls listeners only when `setValue()` or `mutate()`
+value from `getSnapshot()`, then the store calls listeners only when `setValue()` or `update()`
 commits a value that is not equal according to the store equality function. Avoid mutating the object
-returned by `getSnapshot()` directly; expose domain methods that call `setValue()` or `mutate()` so
+returned by `getSnapshot()` directly; expose domain methods that call `setValue()` or `update()` so
 the store can clone, compare, update, and notify consistently.
 
 The wrapper functions around `subscribe()` and `getSnapshot()` are intentional. Class methods are
@@ -190,7 +239,7 @@ value, lets subscribers observe future changes, and can expose the current value
 `AbstractMutableStore` is intentionally narrower. It is useful when you want a small, framework-free
 store class with domain methods, built-in clone/equality behavior, and no observable pipeline API.
 Instead of pushing arbitrary values through `.next()`, consumers call methods such as `increment()`
-or `renameProject()` that decide whether to use `setValue()` or `mutate()`. Subscribers are notified
+or `renameProject()` that decide whether to use `setValue()` or `update()`. Subscribers are notified
 only after the committed value changes according to the store equality function.
 
 Use `BehaviorSubject` when your app already depends on RxJS or needs observable composition,

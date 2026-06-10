@@ -1,5 +1,5 @@
 import { isEqual, type EqualityCheck } from "./base-equality";
-import { cloneValue, mutate, type CloneValue, type Mutator } from "./mutate";
+import { cloneValue, mutate, type CloneValue, type DraftUpdater } from "./mutate";
 
 export interface AbstractMutableStoreOptions<T> {
 	equality?: EqualityCheck<T>;
@@ -56,14 +56,14 @@ export abstract class AbstractMutableStore<T> {
 	}
 
 	/**
-	 * Applies the given mutation function to a draft of the current value.
+	 * Applies the given update function to a draft of the current value.
 	 *
-	 * @param mutationFn - A callback function that takes a draft of the current value, and mutates it
-	 *                     as needed.
+	 * @param updater - A callback function that takes a draft of the current value, and mutates it
+	 *                  as needed.
 	 * @returns The updated value.
 	 */
-	public mutate(mutator: Mutator<T>): T {
-		const newValue = mutate(this.value, mutator, { clone: this.cloneFn });
+	public update(updater: DraftUpdater<T>): T {
+		const newValue = mutate(this.value, updater, { clone: this.cloneFn });
 
 		if (this.equalityFn(this.value, newValue)) {
 			return this.value;
@@ -74,6 +74,11 @@ export abstract class AbstractMutableStore<T> {
 
 		return newValue;
 	}
+
+	public mutate(updater: DraftUpdater<T>): T {
+		return this.update(updater);
+	}
+
 	/**
 	 * Subscribes a listener function to changes in the store and returns an unsubscribe function.
 	 *

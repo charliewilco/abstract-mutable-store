@@ -7,6 +7,8 @@ export {
 	cloneValue,
 	mutate,
 	type CloneValue,
+	type DraftUpdater,
+	type MutableDraft,
 	type MutateOptions,
 	type Mutator,
 } from "./mutate";
